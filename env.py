@@ -9,11 +9,17 @@ class Env :
         self.p2_infos = PlayerInfos("P2")
         self.timer = 0
 
+        self.p1_infos_prev = self.p1_infos
+        self.p2_infos_prev = self.p2_infos
+
     def update_values(self) -> None : 
         '''
         Update the values from memory
         @return : None
         '''
+        self.p1_infos_prev = self.p1_infos
+        self.p2_infos_prev = self.p2_infos
+        
         self.p1_infos.get_values(HEALTH_P1_MEM, 
                     KI_P1, 
                     FULL_POWER_P1, 
