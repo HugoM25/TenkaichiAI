@@ -1,26 +1,26 @@
 import dolphin_memory_engine as dme
 import time 
 from const import * 
-from env import Env
+import numpy as np
+from pynput.keyboard import Key, Controller
+
+MAX_STEPS_PER_EPISODE = 100000
+NUM_EPISODES = 100
+
+LEARNING_RATE = 0.1
+DISCOUNT_RATE = 0.99
+
+EXPLORATION_RATE = 1
+MAX_EXPLORATION_RATE = 1
+MIN_EXPLORATION_RATE = 0.01
+EXPLORATION_DECAY_RATE = 0.001
+
+
+rewards_all_episodes = []
+episodes_done = 0 
 
 def main() : 
-    #Hook dolphin 
-    dme.hook()
-
-    #Check the hook
-    if dme.is_hooked() != True :
-        print("Could not hook")
-        return
-    
-    env = Env()
-
-    while dme.is_hooked() :
-        env.update_values()
-        env.p1_infos.log()
-        env.p2_infos.log()
-        print(f"timer : {env.timer}")
-        time.sleep(1)
-    
-
+    pass
+       
 if __name__ == "__main__" :
     main()

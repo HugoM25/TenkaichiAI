@@ -2,11 +2,11 @@ import gym
 from gym import spaces
 import dolphin_memory_engine as dme
 from const import *
-import numpy as np
 from utils import read_bytes
 
 import vgamepad as vg
 import time
+import subprocess
 
 class CustomEnv(gym.Env):
     def __init__(self):
@@ -22,7 +22,7 @@ class CustomEnv(gym.Env):
         self.observation_space = spaces.Box(low=0, high=1, shape=(23,), dtype=float)
 
         # The action space represent the buttons pressed on the controller there are 10 buttons (0 not pressed, > 0.5 pressed)
-        # First 2 are the joystick left (up and down, left and right)
+        # First 2 are the joystick left (x, y)
         # Then the 4 buttons (A, B, X, Y)
         # Then the 4 triggers (L, R, Z (which is select on the emulator)) 
         # And finally the C button (the right stick going down)
@@ -33,12 +33,29 @@ class CustomEnv(gym.Env):
 
         self.controller = vg.VX360Gamepad()
 
+
+        #Start dolphin using command line
+        cmd = 'D:\Jeux\Dolphins\dolphin-scripting-preview2-x64\Dolphin.exe --script D:\Jeux\Dolphins\dolphin-scripting-preview2-x64\loop.py --e "D:\Roms\Dragon Ball Z - Budokai Tenkaichi 3 (Europe) (En,Fr,De,Es,It).rvz"'
+        subprocess.Popen(cmd, shell=True)
+
+        #Wait for dolphin to start
+        time.sleep(10)
+
+
+        #Hook dolphin 
+        dme.hook()
+
+        #Check the hook
+        if dme.is_hooked() != True :
+            print("Could not hook")
+            return
+
     def reset(self):
         '''
         Reset the environment and return the initial observation
         @return : observation
         '''
-
+        # Reset should be automatic when the episode is done (thanks to the python script inside dolphin)
         return self._get_obs()
 
     def step(self, actions):
@@ -58,8 +75,10 @@ class CustomEnv(gym.Env):
         # Return the next observation, reward, whether the episode is done, and additional info
         self.state = self._get_obs()
 
-        # Reward the player
-        reward = self._compute_reward(prev_state, self.state)
+        reward = 0
+        # Reward the player 
+        if prev_state is not None:
+            reward = self._compute_reward(prev_state, self.state)
 
         done = False
         # Check if the game is over (health of one of the players <= 0 or timer <= 0)
@@ -95,27 +114,56 @@ class CustomEnv(gym.Env):
         @param actions : the actions to apply
         @return : None
         '''
-        SENSI = 0.5
 
         # Left joystick
-        self.controller.left_joystick_float_value = (actions[0], actions[1])
+        self.controller.left_joystick_float(x_value_float=actions[0], y_value_float=actions[1])
+        self.controller.right_joystick_float(x_value_float=0, y_value_float=actions[8])
 
-        # Buttons
-        self.controller.button_a = actions[2] 
-        self.controller.button_b = actions[3] 
-        self.controller.button_x = actions[4] 
-        self.controller.button_y = actions[5] 
 
-        # Triggers
-        self.controller.left_trigger_float_value = actions[6] 
-        self.controller.right_trigger_float_value = actions[7]
-        self.controller.button_select = actions[8]
+        # Press a 
+        if actions[2] > 0.5:
+            self.controller.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_A)
+        else:
+            self.controller.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_A)
 
-        # Right joystick
-        self.controller.right_joystick_float_value = (actions[9])
+        # Press b
+        if actions[3] > 0.5 :
+            self.controller.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_B)
+        else:
+            self.controller.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_B)
+        
+        # Press x
+        if actions[4] > 0.5 :
+            self.controller.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_X)
+        else:
+            self.controller.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_X)
 
-        # Apply the actions
+        # Press y
+        if actions[5] > 0.5 :
+            self.controller.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_Y)
+        else:
+            self.controller.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_Y)
+
+        # Press L
+        if actions[6] > 0.5 :
+            self.controller.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_SHOULDER)
+        else:
+            self.controller.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_SHOULDER)
+
+        # Press R
+        if actions[7] > 0.5 :
+            self.controller.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_SHOULDER)
+        else:
+            self.controller.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_SHOULDER)
+
+        # Press select (correspond to z on the emulator)
+        if actions[8] > 0.5 :
+            self.controller.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_BACK)
+        else:
+            self.controller.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_BACK)
+
         self.controller.update()
+
 
     def _compute_reward(self, prev_state, curr_state) -> float:
         '''
@@ -124,10 +172,32 @@ class CustomEnv(gym.Env):
         @param curr_state : the current observation
         @return : the reward
         '''
-
         reward = 0
 
-        # Reward the player
+        # If the other player took damage, reward the player with 1
+        if prev_state[11] > curr_state[11]:
+            reward += 1 * (prev_state[11] - curr_state[11])/100
+
+        # If the player took damage, reward the player with -1
+        if prev_state[0] > curr_state[0]:
+            reward -= 1 * (prev_state[0] - curr_state[0])/100
+        
+        # If the player does a combo > 2, reward the player with 10 * combo
+        if prev_state[7] < curr_state[7] and curr_state[7] > 2:
+            reward += 10 * (curr_state[7] - prev_state[7])/10
+
+
+        # # Because of how the training env works sometimes it will start with the player almost dead so
+        # # we need to reward based on life loss
+
+        # # If the game is over, reward the player with 1000 if he won, -1000 if he lost
+        # if curr_state[0] <= 0 or curr_state[11] <= 0 or curr_state[22] <= 0:
+        #     # If P1 health <= P2, P2 won
+        #     if curr_state[0] <= curr_state[11]:
+        #         reward = -1000
+        #     else:
+        #         reward = 1000
+
         return reward
 
     def _get_obs(self) -> list : 
@@ -139,10 +209,10 @@ class CustomEnv(gym.Env):
         obs = [0] * 23
 
         # Add P1 infos
-        obs[0] = read_bytes(HEALTH_P1_MEM)
-        obs[1] = read_bytes(KI_P1)
-        obs[2] = read_bytes(FULL_POWER_P1)
-        obs[3] = read_bytes(TRANSFO_P1)
+        obs[0] = read_bytes(HEALTH_P1_MEM, 2)
+        obs[1] = read_bytes(KI_P1, 2)
+        obs[2] = read_bytes(FULL_POWER_P1, 2)
+        obs[3] = read_bytes(TRANSFO_P1, 3)
         obs[4] = dme.read_float(POS_X_P1)
         obs[5] = dme.read_float(POS_Y_P1)
         obs[6] = dme.read_float(POS_Z_P1)
@@ -152,10 +222,10 @@ class CustomEnv(gym.Env):
         obs[10] = dme.read_byte(ATTACK_KI_P1_CNT)
 
         # Add P2 infos
-        obs[11] = read_bytes(HEALTH_P2_MEM)
-        obs[12] = read_bytes(KI_P2)
-        obs[13] = read_bytes(FULL_POWER_P2)
-        obs[14] = read_bytes(TRANSFO_P2)
+        obs[11] = read_bytes(HEALTH_P2_MEM, 2)
+        obs[12] = read_bytes(KI_P2, 2)
+        obs[13] = read_bytes(FULL_POWER_P2, 2)
+        obs[14] = read_bytes(TRANSFO_P2, 3)
         obs[15] = dme.read_float(POS_X_P2)
         obs[16] = dme.read_float(POS_Y_P2)
         obs[17] = dme.read_float(POS_Z_P2)
