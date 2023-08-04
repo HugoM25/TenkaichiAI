@@ -9,7 +9,7 @@ Challenges of this project :
 - Make this environment ready for RL training.
 - Find out the rights parameters to make the AI learns.
 
-(I'm not really experienced with RL training and it's my first time setting up an real-time environment. So any contribution or tip is welcome)
+(I'm not really experienced with RL training and it's my first time setting up an real-time environment. So any contribution or advice is welcome)
 
 
 
@@ -25,3 +25,4 @@ Goal of this project :
 
 - Create a RL agent capable of winning against the CPU of the game.
 - Create a program to allow players to fight against the AI in P1 V P2 mode.
+
