@@ -33,6 +33,9 @@ class CustomEnv(gym.Env):
 
         self.controller = vg.VX360Gamepad()
 
+        self.life_to_lose_save = 15000
+        self.life_to_lose = self.life_to_lose_save
+
 
         #Start dolphin using command line
         cmd = 'D:\Jeux\Dolphins\dolphin-scripting-preview2-x64\Dolphin.exe --script D:\Jeux\Dolphins\dolphin-scripting-preview2-x64\loop.py --e "D:\Roms\Dragon Ball Z - Budokai Tenkaichi 3 (Europe) (En,Fr,De,Es,It).rvz"'
@@ -55,6 +58,7 @@ class CustomEnv(gym.Env):
         Reset the environment and return the initial observation
         @return : observation
         '''
+        self.life_to_lose = self.life_to_lose_save
         # Reset should be automatic when the episode is done (thanks to the python script inside dolphin)
         return self._get_obs()
 
@@ -81,8 +85,13 @@ class CustomEnv(gym.Env):
             reward = self._compute_reward(prev_state, self.state)
 
         done = False
-        # Check if the game is over (health of one of the players <= 0 or timer <= 0)
-        if self.state[0] <= 0 or self.state[11] <= 0 or self.state[22] <= 0: 
+        # # Check if the game is over (health of one of the players <= 0 or timer <= 0)
+        
+        # if self.state[0] <= 0 or self.state[11] <= 0 or self.state[22] <= 0: 
+        #     done = True
+
+        # For the training, the agent is done when it lost too much life
+        if self.life_to_lose <= 0 :
             done = True
 
         info = {}
