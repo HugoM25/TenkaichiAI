@@ -1,7 +1,9 @@
+'''
+Script to manually execute actions on the AI Side client. Mainly used for debugging purposes.
+'''
+
 import dolphin_client_api as dca
 import argparse
-
-
 
 if __name__ == '__main__':
     # Parse arguments

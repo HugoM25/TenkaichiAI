@@ -1,6 +1,7 @@
 '''
 This file is used to communicate with the dolphin_server.py file. It contains various functions that can be used to send commands to the server.
 '''
+
 import json
 import socket
 
@@ -21,10 +22,25 @@ def get_observation() -> [float] :
     '''
     data_server = send_message('{"action":"get_observation"}')
 
+    print(data_server)
+
     # Format data to JSON
-    observation = []
+    data_json = json.loads(data_server)
+
+    # Get the observation
+    observation = data_json['observation']
+
+    # Convert the observation to a list of floats
+    observation = [float(i) for i in observation]
 
     return observation
+
+def send_inputs(inputs) -> None :
+    '''
+    Set the inputs of the emulator
+    @param inputs: The inputs to set
+    '''
+    send_message('{"action":"set_inputs", "inputs":' + json.dumps(inputs) + '}')
 
 
 def send_message(message):
