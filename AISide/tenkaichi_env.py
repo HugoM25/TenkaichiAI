@@ -1,12 +1,14 @@
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import subprocess
 import time
 import dolphin_client_api as dca
 from controller_class import GCInputs
-class CustomEnv(gym.Env):
+
+
+class TenkaichiEnv(gym.Env):
     def __init__(self):
-        super(CustomEnv, self).__init__()
+        super(TenkaichiEnv, self).__init__()
 
         # Define your custom observation space and action space
 
@@ -18,7 +20,7 @@ class CustomEnv(gym.Env):
         # The action space represent the buttons pressed on the controller there are 13 buttons
         # Stick X, Stick Y, C-Stick X, C-Stick Y, L-Analog, R-Analog, L, R, A, B, X, Y, Z
 
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(11,), dtype=float)
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(13,), dtype=float)
 
         self.state = None
 
@@ -32,14 +34,16 @@ class CustomEnv(gym.Env):
         time.sleep(3)
 
 
-    def reset(self):
+    def reset(self, seed=None, return_info=None, options=None):
         '''
         Reset the environment and return the initial observation
         @return : observation
         '''
         dca.reset()
 
-        return self._get_obs()
+        self.state = self._get_obs()
+
+        return self.state, None
 
     def step(self, actions):
         ''' 
@@ -67,13 +71,14 @@ class CustomEnv(gym.Env):
         done = False
 
         # Check if the game is over (health of one of the players <= 0 or timer <= 0)
-        if self.state[0] <= 0 or self.state[11] <= 0 or self.state[22] <= 0: 
+        if self.state[0] <= 0 or self.state[1] <= 0 or self.state[2] <= 0: 
             done = True
 
 
         info = {}
+        truncated = False
 
-        return self.state, reward, done, info
+        return self.state, reward, done, truncated, info
 
 
     def render(self, mode='human') -> None:
@@ -100,30 +105,34 @@ class CustomEnv(gym.Env):
         @param actions : the actions to apply
         @return : None
         '''
-        # The action is a vector of 13 values between -1 and 1
-        # The joystick is at rest at 128 and can go from 0 to 255
-        self.controller.StickX = int((actions[0] + 1) * 127.5)
-        self.controller.StickY = int((actions[1] + 1) * 127.5)
+        try : 
+            # The action is a vector of 13 values between -1 and 1
+            # The joystick is at rest at 128 and can go from 0 to 255
+            self.controller.StickX = int((actions[0] + 1) * 127.5)
+            self.controller.StickY = int((actions[1] + 1) * 127.5)
 
-        # The C button is the same as the joystick
-        self.controller.CStickX = int((actions[2] + 1) * 127.5)
-        self.controller.CStickY = int((actions[3] + 1) * 127.5)
+            # The C button is the same as the joystick
+            self.controller.CStickX = int((actions[2] + 1) * 127.5)
+            self.controller.CStickY = int((actions[3] + 1) * 127.5)
 
-        # The triggers can go from 0 to 255
-        self.controller.TriggerLeft = int((actions[4] + 1) * 127.5)
-        self.controller.TriggerRight = int((actions[5] + 1) * 127.5)
+            # The triggers can go from 0 to 255
+            self.controller.TriggerLeft = int((actions[4] + 1) * 127.5)
+            self.controller.TriggerRight = int((actions[5] + 1) * 127.5)
 
-        self.controller.L = actions[6] > 0.5
-        self.controller.R = actions[7] > 0.5
+            self.controller.L = int(actions[6] > 0.5)
+            self.controller.R = int(actions[7] > 0.5)
 
-        self.controller.A = actions[8] > 0.5
-        self.controller.B = actions[9] > 0.5
-        self.controller.X = actions[10] > 0.5
-        self.controller.Y = actions[11] > 0.5
-        self.controller.Z = actions[12] > 0.5
+            self.controller.A = int(actions[8] > 0.5)
+            self.controller.B = int(actions[9] > 0.5)
+            self.controller.X = int(actions[10] > 0.5)
+            self.controller.Y = int(actions[11] > 0.5)
+            self.controller.Z = int(actions[12] > 0.5)
 
-        # Send the controller inputs to dolphin
-        dca.send_inputs(self.controller)
+            # Send the controller inputs to dolphin
+            dca.send_inputs(self.controller)
+        except:
+            print("Error while applying actions")
+            print(actions)
 
     def _compute_reward(self, prev_state, curr_state) -> float:
         '''
@@ -134,23 +143,18 @@ class CustomEnv(gym.Env):
         '''
         reward = 0
 
-        # If the other player took damage, reward the player with 1
-        if prev_state[11] > curr_state[11]:
-            reward += 1 * (prev_state[11] - curr_state[11])/100
-
-        # If the player took damage, reward the player with -1
-        if prev_state[0] > curr_state[0]:
-            reward -= 1 * (prev_state[0] - curr_state[0])/100
+        # If the player took damage, reward him with -1
+        if prev_state[13] < curr_state[13] :
+            reward = -10
         
-        # If the player does a combo > 2, reward the player with 10 * combo
-        if prev_state[7] < curr_state[7] and curr_state[7] > 2:
-            reward += 10 * (curr_state[7] - prev_state[7])/10
-
+        # If the player dealt damage, reward him with 1
+        if  prev_state[14] < curr_state[14]:
+            reward = 10
 
         # If the game is over, reward the player with 1000 if he won, -1000 if he lost
-        if curr_state[0] <= 0 or curr_state[11] <= 0 or curr_state[22] <= 0:
+        if curr_state[0] <= 0 or curr_state[1] <= 0 or curr_state[2] <= 0:
             # If P1 health <= P2, P2 won
-            if curr_state[0] <= curr_state[11]:
+            if curr_state[1] <= curr_state[2]:
                 reward = -1000
             else:
                 reward = 1000
@@ -162,8 +166,5 @@ class CustomEnv(gym.Env):
         Get the observation from the memory 
         @return : observation
         '''
-        print("Getting observation...")
         obs = dca.get_observation()
-        print("Got observation")
-        print(obs)
         return obs

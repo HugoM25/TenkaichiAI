@@ -9,18 +9,18 @@ class GCInputs():
         Initialize the inputs of the controller
         '''
 
-        self.Left: bool = False
-        self.Right: bool = False
-        self.Down: bool = False
-        self.Up: bool  = False
-        self.Z: bool = False
-        self.R: bool = False
-        self.L: bool = False
-        self.A: bool = False
-        self.B: bool = False
-        self.X: bool = False
-        self.Y: bool = False
-        self.Start: bool = False
+        self.Left: int = 0
+        self.Right: int = 0
+        self.Down: int = 0
+        self.Up: int = 0
+        self.Z: int = 0
+        self.R: int = 0
+        self.L: int = 0
+        self.A: int = 0
+        self.B: int = 0
+        self.X: int = 0
+        self.Y: int = 0
+        self.Start: int = 0
         self.StickX: int = 128 # 0-255, 128 is neutral 
         self.StickY: int = 128 # 0-255, 128 is neutral
         self.CStickX: int = 128 # 0-255, 128 is neutral
@@ -29,7 +29,7 @@ class GCInputs():
         self.TriggerRight: int = 255 # 0-255
         self.AnalogA: int = 255 # 0-255
         self.AnalogB: int =255 # 0-255
-        self.Connected: bool = True
+        self.Connected: int = 0
     
     def parse_infos_json(self, data) -> None:
         '''

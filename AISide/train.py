@@ -1,24 +1,24 @@
 from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
-from customenv import CustomEnv
+from tenkaichi_env import TenkaichiEnv
 
 def main():
     # Create the custom environment
-    env = CustomEnv()
-
+    env = TenkaichiEnv()
+    
     # Create the PPO agent
     agent = PPO("MlpPolicy", env, verbose=1)
 
     # Train the agent for multiple episodes
-    num_episodes = 10
+    num_episodes = 5
     max_steps_per_episode = 1000
     total_timesteps = 0
     for episode in range(num_episodes):
         episode_reward = 0
-        obs = env.reset()
+        obs, _ = env.reset()
         for step in range(max_steps_per_episode):
             action, _ = agent.predict(obs, deterministic=False)
-            obs, reward, done, _ = env.step(action)
+            obs, reward, done, _, info = env.step(action)
             episode_reward += reward
             total_timesteps += 1
             print("Step:", step, "Reward:", reward, "Done:", done)

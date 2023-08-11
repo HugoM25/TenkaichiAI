@@ -4,6 +4,7 @@ This file is used to communicate with the dolphin_server.py file. It contains va
 
 import json
 import socket
+from controller_class import GCInputs
 
 HOST = 'localhost'
 PORT = 12345
@@ -22,8 +23,6 @@ def get_observation() -> [float] :
     '''
     data_server = send_message('{"action":"get_observation"}')
 
-    print(data_server)
-
     # Format data to JSON
     data_json = json.loads(data_server)
 
@@ -40,7 +39,8 @@ def send_inputs(inputs) -> None :
     Set the inputs of the emulator
     @param inputs: The inputs to set
     '''
-    send_message('{"action":"set_inputs", "inputs":' + json.dumps(inputs) + '}')
+
+    send_message('{"action":"set_inputs", "inputs":' + json.dumps(vars(inputs)) + '}')
 
 
 def send_message(message):
@@ -59,7 +59,5 @@ def send_message(message):
 
     # Close the client socket
     client_socket.close()
-
-    print('Received', repr(data_server.decode()))
 
     return data_server.decode()

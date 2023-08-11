@@ -92,11 +92,10 @@ async def handle_client(reader, writer):
             break
         message = data.decode()
         
-        # Handle the message here
-        print("Message received !")
 
         req_json = json.loads(message)
-
+        print(f"Action received : {req_json['action']}")
+        
         if req_json["action"] == "reset" :
             reset()
             server_response = '{"status":"ok"}'
